@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest==9.1.1
+hydra-core==1.3.6
