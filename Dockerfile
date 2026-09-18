@@ -7,7 +7,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY flower_web.py config.yaml ./
+COPY src/flower/flower_web.py src/flower/config.yaml ./
 
 EXPOSE 8000
 
