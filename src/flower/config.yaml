@@ -1,0 +1,31 @@
+# Hydra config for the Exercise version of flower_data.py / flower_model.py.
+# Every hyperparameter and the imported (pretrained) model are configured here,
+# instead of being hard-coded in the Python files.
+
+data:
+  height: 180
+  width: 180
+  load_margin: 20            # images are loaded at (height+load_margin, width+load_margin) so RandomCrop has room to crop from
+  batch_size: 32
+  dataset_dirname: flower_photos
+  augmented_dirname: flower_photos_augmented
+  copies_per_image: 5        # number of augmented copies generated per original image
+
+model:
+  num_classes: 5
+  dense_units: 512
+  epochs: 10
+  backbone:
+    _target_: tensorflow.keras.applications.MobileNetV2   # swap this to try a different imported model
+    include_top: false
+    input_shape: ["${data.height}", "${data.width}", 3]
+    pooling: avg
+    classes: ${model.num_classes}
+    weights: imagenet
+  optimizer:
+    _target_: tensorflow.keras.optimizers.Adam
+    learning_rate: 0.0005
+
+mlflow:
+  tracking_uri: http://127.0.0.1:5000
+  experiment_name: flowers-classification
