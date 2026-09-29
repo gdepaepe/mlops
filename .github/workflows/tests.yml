@@ -1,27 +1,24 @@
 name: Tests
 
-on:
-  push:
-  pull_request:
+on: push
 
 jobs:
-  pytest:
-    runs-on: ubuntu-latest
+  tests:
+    runs-on: ubuntu-latest  # Runs in an Ubuntu runner (VM)
     steps:
-      - uses: actions/checkout@v4
+      - name: Clone repo in runner
+        uses: actions/checkout@v4  # a pre-built action (with version)
 
-      - uses: actions/setup-python@v5
+      - name: Install Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-test.txt
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
+        run: pip install -r requirements-test.txt
+
+      - name: Lint  # Could also run in a separate job or separate workflow
+        run: flake8 src tests
 
       - name: Run tests
         run: pytest
