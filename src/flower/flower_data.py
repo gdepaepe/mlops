@@ -29,7 +29,7 @@ def build_augmentation(height, width):
 
 
 def augment_and_save_dataset(flowers_data, height, width, load_height, load_width,
-                              augmented_dirname, copies_per_image, output_dir=None):
+                             augmented_dirname, copies_per_image, output_dir=None):
     """Expand the flower photos dataset on disk.
 
     For every original image, save a (center-cropped) copy of the original plus

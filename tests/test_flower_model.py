@@ -5,7 +5,7 @@ cv2 = pytest.importorskip("cv2")
 pytest.importorskip("tensorflow")
 pytest.importorskip("mlflow")
 
-import flower_model
+import flower_model  # noqa: E402 (import after importorskip)
 
 
 class DummyModel:

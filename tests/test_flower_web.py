@@ -6,9 +6,9 @@ pytest.importorskip("tensorflow")
 pytest.importorskip("mlflow")
 pytest.importorskip("PIL")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402 (import after importorskip)
 
-import flower_web
+import flower_web  # noqa: E402 (import after importorskip)
 
 # No `with TestClient(...) as client:` here on purpose: that would run the
 # `startup` handler, which tries to reach a real MLflow server.

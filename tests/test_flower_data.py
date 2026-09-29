@@ -4,7 +4,7 @@ import pytest
 cv2 = pytest.importorskip("cv2")
 pytest.importorskip("tensorflow")
 
-import flower_data
+import flower_data  # noqa: E402 (import after importorskip)
 
 
 def test_get_augmented_data_dir(monkeypatch, tmp_path):

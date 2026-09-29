@@ -1,13 +1,13 @@
-name: Tests
+name: Tests  # Each workflow is a separate YAML file
 
 on: push
 
-jobs:
+jobs:  # Workflow can have multiple jobs (running in parallel)
   tests:
-    runs-on: ubuntu-latest  # Runs in an Ubuntu runner (VM)
+    runs-on: ubuntu-latest  # Job runs in an Ubuntu runner (VM)
     steps:
       - name: Clone repo in runner
-        uses: actions/checkout@v4  # a pre-built action (with version)
+        uses: actions/checkout@v4  # A pre-built action (with version)
 
       - name: Install Python
         uses: actions/setup-python@v5
@@ -17,8 +17,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-test.txt
 
-      - name: Lint  # Could also run in a separate job or separate workflow
+      - name: Lint  # Could also run in a separate job or in a separate workflow
         run: flake8 src tests
 
       - name: Run tests
         run: pytest
+
