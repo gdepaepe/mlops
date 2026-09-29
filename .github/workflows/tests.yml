@@ -1,5 +1,4 @@
 name: Tests  # Each workflow is a separate YAML file
-
 on: push
 
 jobs:  # Workflow can have multiple jobs (running in parallel)

@@ -1,0 +1,26 @@
+name: Build Docker Image
+on:
+  workflow_run:
+    workflows: [Tests]  # must match the name of tests.yml
+    types: [completed]
+    branches: [main]
+
+jobs:
+  Build:
+    if: github.event.workflow_run.conclusion == 'success'  # completed also means failed
+    runs-on: ubuntu-latest  # Docker is installed!
+    steps:
+      - name: Clone repo in runner
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:   # Create in Secrets and Variables of repo:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Container Image
+        run: docker build -t gdepaepe/flower-web .
+
+      - name: Push container to Docker Hub
+        run: docker push gdepaepe/flower-web
