@@ -1,3 +1,4 @@
+import pathlib
 import sys
 import cv2
 import numpy as np
@@ -10,6 +11,8 @@ import mlflow
 import mlflow.tensorflow
 
 from flower_data import get_augmented_data_dir, load_datasets
+
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 # MLflow writes emoji (e.g. the run-URL line) to stdout; the default Windows console
 # encoding (cp1252) can't handle those, which crashes the script after a successful run.
@@ -63,6 +66,16 @@ def log_history_to_mlflow(history):
         )
 
 
+def save_model_onnx(dnn_model, onnx_path):
+    """Export the trained model in ONNX format. Relative paths are resolved against the project root."""
+    onnx_path = pathlib.Path(onnx_path)
+    if not onnx_path.is_absolute():
+        onnx_path = PROJECT_ROOT / onnx_path
+    onnx_path.parent.mkdir(parents=True, exist_ok=True)
+    dnn_model.export(str(onnx_path), format="onnx")
+    return onnx_path
+
+
 def predict_image(dnn_model, image_path, image_cat, height, width):
     """Run inference on a single image and print the predicted category."""
     image = cv2.imread(str(image_path))
@@ -111,6 +124,8 @@ def main(cfg: DictConfig):
         # flower_web.py) can get them from MLflow instead of needing the training
         # dataset on disk.
         mlflow.log_dict({"class_names": list(image_cat)}, "class_names.json")
+        onnx_path = save_model_onnx(dnn_model, cfg.model.onnx_path)
+        mlflow.log_artifact(str(onnx_path), artifact_path="onnx")
 
         sample_image = list((augmented_data / 'sunflowers').glob('*'))[1]
         predicted_class = predict_image(dnn_model, sample_image, image_cat, height, width)

@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 
 cv2 = pytest.importorskip("cv2")
-pytest.importorskip("tensorflow")
-pytest.importorskip("mlflow")
+pytest.importorskip("onnxruntime")
+pytest.importorskip("huggingface_hub")
 pytest.importorskip("PIL")
 
 from fastapi.testclient import TestClient  # noqa: E402 (import after importorskip)
@@ -11,16 +11,27 @@ from fastapi.testclient import TestClient  # noqa: E402 (import after importorsk
 import flower_web  # noqa: E402 (import after importorskip)
 
 # No `with TestClient(...) as client:` here on purpose: that would run the
-# `startup` handler, which tries to reach a real MLflow server.
+# `startup` handler, which downloads the real model from the Hugging Face Hub.
 client = TestClient(flower_web.app)
 
 
-class DummyModel:
+class DummyInput:
+    name = "input"
+
+
+class DummySession:
+    """Stands in for an onnxruntime.InferenceSession."""
+
     def __init__(self, prediction):
         self._prediction = prediction
+        self.last_feed = None
 
-    def predict(self, batch):
-        return self._prediction
+    def get_inputs(self):
+        return [DummyInput()]
+
+    def run(self, output_names, feed):
+        self.last_feed = feed
+        return [self._prediction]
 
 
 def _jpeg_bytes(height=50, width=60):
@@ -39,7 +50,8 @@ def test_index_returns_upload_form():
 
 def test_predict_returns_highest_probability_class(monkeypatch):
     prediction = np.array([[0.1, 0.05, 0.7, 0.1, 0.05]])
-    monkeypatch.setitem(flower_web.state, "model", DummyModel(prediction))
+    session = DummySession(prediction)
+    monkeypatch.setitem(flower_web.state, "session", session)
     monkeypatch.setitem(
         flower_web.state, "class_names",
         ["daisy", "dandelion", "roses", "sunflowers", "tulips"],
@@ -49,6 +61,9 @@ def test_predict_returns_highest_probability_class(monkeypatch):
 
     assert predicted_class == "roses"
     assert list(probabilities) == list(prediction[0])
+    batch = session.last_feed["input"]
+    assert batch.shape == (1, flower_web.HEIGHT, flower_web.WIDTH, 3)
+    assert batch.dtype == np.float32
 
 
 def test_image_to_data_uri_produces_jpeg_data_uri():
@@ -57,63 +72,26 @@ def test_image_to_data_uri_produces_jpeg_data_uri():
     assert data_uri.startswith("data:image/jpeg;base64,")
 
 
-def test_get_class_names_extracts_class_list(monkeypatch):
-    monkeypatch.setattr(
-        flower_web.mlflow.artifacts, "load_dict",
-        lambda uri: {"class_names": ["daisy", "roses"]},
-    )
+def test_download_model_uses_configured_repo(monkeypatch):
+    calls = {}
 
-    assert flower_web.get_class_names("run-123") == ["daisy", "roses"]
+    def fake_download(repo_id, filename):
+        calls.update(repo_id=repo_id, filename=filename)
+        return "/tmp/flower_model.onnx"
 
+    monkeypatch.setattr(flower_web, "hf_hub_download", fake_download)
 
-class FakeInfo:
-    def __init__(self, run_id):
-        self.run_id = run_id
-
-
-class FakeRun:
-    def __init__(self, run_id):
-        self.info = FakeInfo(run_id)
+    assert flower_web.download_model() == "/tmp/flower_model.onnx"
+    assert calls == {"repo_id": "gdepaepe/dai6", "filename": "flower_model.onnx"}
 
 
-class FakeExperiment:
-    def __init__(self, experiment_id):
-        self.experiment_id = experiment_id
+def test_load_model_fills_state(monkeypatch):
+    monkeypatch.setattr(flower_web, "download_model", lambda: "model.onnx")
+    monkeypatch.setattr(flower_web.ort, "InferenceSession", lambda path: DummySession(None))
+    monkeypatch.setitem(flower_web.state, "session", None)
+    monkeypatch.setitem(flower_web.state, "class_names", None)
 
+    flower_web.load_model()
 
-class FakeClient:
-    def __init__(self, experiment=None, runs=None):
-        self._experiment = experiment
-        self._runs = runs or []
-
-    def get_experiment_by_name(self, name):
-        return self._experiment
-
-    def search_runs(self, experiment_ids, filter_string, order_by, max_results):
-        return self._runs
-
-
-def _patch_client(monkeypatch, fake_client):
-    monkeypatch.setattr(flower_web.mlflow, "set_tracking_uri", lambda uri: None)
-    monkeypatch.setattr(flower_web.mlflow.tracking, "MlflowClient", lambda: fake_client)
-
-
-def test_get_latest_run_raises_when_experiment_missing(monkeypatch):
-    _patch_client(monkeypatch, FakeClient(experiment=None))
-
-    with pytest.raises(RuntimeError, match="not found"):
-        flower_web.get_latest_run()
-
-
-def test_get_latest_run_raises_when_no_finished_runs(monkeypatch):
-    _patch_client(monkeypatch, FakeClient(experiment=FakeExperiment("exp1"), runs=[]))
-
-    with pytest.raises(RuntimeError, match="No finished runs"):
-        flower_web.get_latest_run()
-
-
-def test_get_latest_run_returns_latest_run(monkeypatch):
-    fake_run = FakeRun("run-abc")
-    _patch_client(monkeypatch, FakeClient(experiment=FakeExperiment("exp1"), runs=[fake_run]))
-
-    assert flower_web.get_latest_run() is fake_run
+    assert isinstance(flower_web.state["session"], DummySession)
+    assert flower_web.state["class_names"] == ["daisy", "dandelion", "roses", "sunflowers", "tulips"]

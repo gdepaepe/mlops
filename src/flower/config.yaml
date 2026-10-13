@@ -15,6 +15,7 @@ model:
   num_classes: 5
   dense_units: 512
   epochs: 10
+  onnx_path: ../EX_Models/dai6/flower_model.onnx   # relative to the project root
   backbone:
     _target_: tensorflow.keras.applications.MobileNetV2   # swap this to try a different imported model
     include_top: false
@@ -29,3 +30,8 @@ model:
 mlflow:
   tracking_uri: http://127.0.0.1:5000
   experiment_name: flowers-classification
+
+huggingface:                 # where flower_web.py downloads the served model from
+  repo_id: gdepaepe/dai6
+  filename: flower_model.onnx
+  class_names: [daisy, dandelion, roses, sunflowers, tulips]   # order of the model's output layer (see the model card)

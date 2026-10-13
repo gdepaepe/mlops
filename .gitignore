@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 outputs/
+.coverage
+mlflow.db
+mlartifacts/

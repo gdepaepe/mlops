@@ -77,3 +77,18 @@ def test_log_history_to_mlflow_logs_metrics_per_epoch(monkeypatch):
         (0, {"loss": 0.9, "accuracy": 0.4, "val_loss": 1.0, "val_accuracy": 0.3}),
         (1, {"loss": 0.5, "accuracy": 0.8, "val_loss": 0.6, "val_accuracy": 0.7}),
     ]
+
+
+def test_save_model_onnx_resolves_relative_path_and_creates_dir(tmp_path, monkeypatch):
+    monkeypatch.setattr(flower_model, "PROJECT_ROOT", tmp_path)
+
+    class ExportRecorder:
+        def export(self, path, format):
+            self.path, self.format = path, format
+
+    model = ExportRecorder()
+    result = flower_model.save_model_onnx(model, "models/flower_model.onnx")
+
+    assert result == tmp_path / "models" / "flower_model.onnx"
+    assert result.parent.is_dir()
+    assert model.path == str(result) and model.format == "onnx"
