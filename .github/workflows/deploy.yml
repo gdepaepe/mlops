@@ -1,0 +1,19 @@
+name: Deploy to Cloud Run
+on: workflow_dispatch  # only started manually (Actions tab > Run workflow)
+
+jobs:
+  Deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:   # JSON key of a service account (roles: Cloud Run Admin + Service Account User)
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Deploy container from Docker Hub
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:   # project is taken from the service account key
+          service: flower-web
+          image: docker.io/gdepaepe/flower-web:latest
+          region: europe-west1
+          flags: --port=8000 --memory=1Gi --allow-unauthenticated
