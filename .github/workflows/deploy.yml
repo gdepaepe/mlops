@@ -16,4 +16,4 @@ jobs:
           service: flower-web
           image: docker.io/gdepaepe/flower-web:latest
           region: europe-west1
-          flags: --port=8000 --memory=1Gi --allow-unauthenticated
+          flags: --port=8000 --memory=4Gi --cpu=2 --allow-unauthenticated
